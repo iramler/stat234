@@ -1,0 +1,371 @@
+---
+title: "Introduction to Pivoting and Tidy Data in R"
+output: html_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  eval = FALSE,
+  message = FALSE
+  )
+```
+
+## Introduction
+
+Data sets are stored in tabular format and there are many possible ways to organize tabular data. Some organizational schemes are designed to be easily read on the page (or screen), while others are designed to be easily used in analysis. In this tutorial, we focus on how a data set should be formatted for analysis in R.
+
+Make sure that the following packages are loaded
+
+```{r, warning=FALSE, message=FALSE}
+library(readr) # for reading in data 
+library(tidyr)     # contains tools to tidy data
+library(ggplot2) # for plotting
+library(dplyr) # for wrangling
+```
+
+and load in the example data sets
+
+```{r}
+UBSprices <- read_csv("data/UBSprices.csv")
+polls <- read_csv("data/rcp-polls.csv", na = "--")
+airlines <- read_csv("data/airline-safety.csv")
+```
+
+## Definition of a tidy data set
+
+In R, it is easiest to work with data that follow five basic rules:
+
+1. Every **variable** is stored in its own **column**.
+2. Every observation is stored in its own **row**---that is, every row corresponds to a single **case**.
+3. Each **value** of a variable is stored in a **cell** of the table.
+4. Values should not contain units. Rather, units should be specified in the supporting documentation for the data set, often called a *codebook*.
+5. There should be no extraneous information (footnotes, table titles, etc.).
+
+A data set satisfying these rules is said to be **tidy**, a term popularized by Hadley Wickham.
+
+
+**Remarks**
+
+* Most of the time data that violate rules 4 and 5 are obviously not tidy, and there are easy ways to exclude footnotes and titles in spreadsheets by simply omitting the offending rows. This tutorial focuses on the "sneakier" form of untidiness that violates at least one of the first three rules.
+
+* There are certainly times in which storing data that violates these rules can be useful. The rules for "tidyness" shouldn't be considered sacrosanct. Instead, your goal should be to know how to arrange data in different formats to meet the needs of your analysis.
+
+
+This tutorial will describe the following `tidyr` commands, which can be thought of as verbs for tidying data:
+
+
+Command      | Meaning
+------------ | --------
+`pivot_longer`     | collapses multiple columns into two columns
+`pivot_wider`     | creates multiple columns from two columns
+`separate`   | splits compound variables into individual columns
+`unite`      | combines multiple columns into a single column
+
+We will also use functions from the `parse_*` family (in the `readr` package) to further tidy and clean our data.
+
+
+## Tidying longitudinal data (`pivot_longer`)
+
+UBS is an international bank that reports prices of various staples in major cities every three years. The data set in `UBSprices` data set contains prices of a 1 kg bag of rice in 2009 and 2003 in major world cities. The data set was extracted from the `alr4` R package.
+
+```{r}
+head(UBSprices)
+```
+
+**Exercise**
+1. Explain why this data is not tidy in it's current format
+
+
+
+To tidy these data, we need to
+
+1. Reorganize the data so that each row corresponds to a city in a specific year.
+2. Create a single variable for the price of rice.
+3. Add a variable for year.
+
+
+> To do this, we will use the `pivot_longer` function in the `tidyr` package. `pivot_longer` collapses multiple columns into two columns: a **names** column and a **values** column. The **name** will be the new variable containing the old column names and the **value** will contain the information recorded in the cells of the collapsed columns.
+
+In our example, we want to collapse `rice2003` and `rice2009` into the name-value pair `year` and `price`. To do this, we use the following command:
+
+```{r}
+
+```
+
+**Remarks**
+
+* The first argument passed to `pivot_longer` should be the data frame being tidied. This is true for all of the `tidyr` functions we discuss in this tutorial. Note that piping works nicely with these functions too.
+* After specifying the data frame, we specify the columns that you wish to collapse. There are multiple ways to do this, the easiest of which is to specify them in a vector. See [<tidy_select>](https://tidyr.tidyverse.org/reference/tidyr_tidy_select.html){target="_blank"} for more accepatable formats.
+* After cols arguments,the next two arguments specify the column names you wish to give to two new columns.
+
+
+**Exercises**
+
+2. How are the number of rows adjusted by using the `pivot_longer` command? Use the `dim(UBSprices)` command to determine how many rows are in the **UBSprices** data set and `dim(tidy_ubs)` to determine how many are in the **tidy_ubs** data set).
+
+3. How many rows would there be if used the pivot_longer command and the original **UBSprices** data set had five columns of  years: `rice2003`, `rice2006`, `rice2009`, `rice2012`, and `rice2015`?
+
+
+## Parsing Functions from the readr package
+
+Finally, we need to modify the year column by removing the word rice from each cell.
+To do this, we can use the `parse_number` function in the `readr` package.
+We now have a data set that we can call tidy.
+
+
+```{r}
+
+```
+
+
+**Remarks** 
+
+* This data set started in a relatively tidy form, so it may be difficult to see the benefit of tidying it. Tidy data is typically required for summarizing and plotting data in R. For example, consider making a side-by-side boxplot using `ggplot2`.
+
+```{r}
+ggplot(data = tidy_ubs, mapping = aes(y = price, x = factor(year)) ) +
+  geom_boxplot() +
+  xlab("year")
+```
+
+This was straightforward since **tidy_ubs** was already tidy, but would have required extra manipulation in the original format. 
+
+```{r, eval=FALSE}
+ggplot(data = UBSprices) +
+  geom_boxplot(aes(x = "2003", y = rice2003)) +
+  geom_boxplot(aes(x = "2009", y = rice2009))
+# imagine how annoying this would be if you 
+# have more years deal with!
+```
+
+
+* `parse_number` and a few of its related functions from the `readr` package are extremely useful. Be sure to be aware of them. (Also, there are a similar set of `as.*` functions. However, these tend to be used to switch between types of data as opposed to clean data.)
+
+## Tidying pollster data (`separate + pibot_longer`)</h2>
+
+The **polls** data set contains the results of various presidential polls conducted during late October 2020, and was scraped from  [RealClear Politics](http://www.realclearpolitics.com/epolls/latest_polls/president/){target="_blank"}.
+
+```{r}
+polls
+```
+
+
+Here, the data set is not tidy because
+
+* The `date` column contains both the beginning and end dates. These should be stored in separate columns.
+* The `Sample` column contains two variables: the number of people in the sample and the population that was sampled (likely voters or registered voters). These should be stored in separate columns.
+* The last four column names are values of `candidate` and `party` variables, which should be stored in their own columns. 
+
+To break a single <u>character</u> column into multiple new columns we use the `separate` function in the `tidyr` package.
+
+To begin, let's break the `Date` column into `begin` and `end` columns:
+
+```{r}
+
+
+```
+
+**Remarks**
+
+* The second argument, `col`, specifies the name of the column to be split.
+* The third argument, `into`, specifies the names of the new columns. Note that  since these are specific column names we are creating, they should be given in quotes.
+* R will try to guess how the values should be separated by searching for non-alphanumeric values; however, if there are multiple non-alphanumeric values this may fail. In this example, if we did not specify that `sep = " - "`, then R would erroneously use `\` as the separator. To manually specify the separator between columns we can place the character(s) in quotes. 
+* In `sep = " - "`, the spaces around `-` avoid excess whitespace in the resulting cell values.
+
+We also need to separate the `sample` column into `size` and `population` columns.
+
+```{r}
+
+
+```
+
+
+
+Next, we need to `pivot_longer` the last four columns into a `candidate` variable.
+
+```{r}
+
+
+```
+
+
+
+Notice that instead of writing out the column names (`Biden (D)`, `Trump (R)`, etc.) we can simply specify the column numbers---here `7:9` specifies that we are gathering columns 7 through 9 for the pivot. Note that you can also use negative indices for the cols argument, just like in the `select` function from `dplyr`.
+
+Finally, we need to `separate` the candidate names from the political party. 
+
+```{r}
+
+
+```
+
+
+**Remark**
+
+In the last command we let R guess which separator to use. This worked, but resulted in a warning message---we're lucky that it worked! There are many situations where the separator is too complex for R to guess correctly and it cannot be specified using a simple character in quotes. In such cases we need to use regular expressions to aid our data tidying, but that's a topic for another tutorial (on the `stringr` package). The important thing to note here is that you should <u>always check</u> that `separate` worked as you expected, don't blindly trust it!
+
+
+### Tidying and Piping
+
+Recall that you could put these all together into a single chain of pipes. Here would be an example of doing so.
+
+```{r}
+
+
+
+```
+
+
+
+## Tidying crash data (`pivbot_longer + separate + pivot_wider`)
+
+
+The **airlines** data set contains the [raw data](https://github.com/fivethirtyeight/data/tree/master/airline-safety) behind the article [Should Travelers Avoid Flying Airlines That Have Had Crashes in the Past?](http://fivethirtyeight.com/features/should-travelers-avoid-flying-airlines-that-have-had-crashes-in-the-past/) that appeared on [fivethirtyeight.com](http://fivethirtyeight.com/).
+
+```{r}
+airlines
+```
+
+
+In this example, a case is best described as an airline in a specific time frame, so these data are not tidy because each case is not its own row. Additionally, the last six column names contain the time frame, which is a value. In order to tidy this data set we must
+
+* have rows corresponding to airlines in a specific time frame,
+* create a `years` column to specify the time frame,
+* and create columns for each type of accident: `incidents`, `fatal_accidents`, and `fatalities`.
+
+
+First, we `pivot_longer` the last six columns into a common `accidents` column. This will allow us to easily create the `years` column. 
+
+```{r}
+
+
+```
+
+Notice that in our cols statement, we can use negation as a shortcut to tell R to pivot all except the mentioned columns. (i.e., For this dataset, pivoting columns 3:8 is the same as pivoting everything except 1 & 2.)
+
+Next, we `separate` the values of the new `accidents` column into `var` (short for variable) and `years`. We can specify `sep = "[.]"` to denote that the period is the separator. (If you want to learn more about why we need brackets around the period you need to delve into regular expressions when we have our unit on string manipulation.)
+
+```{r}
+
+
+```
+
+
+Finally, we need to ensure that each row corresponds to a case. (Don't worry, this will also make each column a variable!) Currently, there are six rows for each airline: one for each `var` in each time frame. To solve this problem, we need to `pivot_wider` out the `var` column so that each variable has its own column.
+
+```{r}
+
+
+```
+
+**Remark**
+
+Notice that the first argument given to `pivot_wide` is the data frame, followed by the name-value pair. The names_from is the name of the column whose values will be used as column headings and the values_from is the name of the column whose values will populate the cells of the new columns. In this example, we use `var` as the names_from and populate the cells with the `count`.
+
+## Unite
+
+`unite()` is the "opposite" of `separate()`: use it when one variable is stored across multiple columns, but each row still represents a single case. The need to use `unite()` is less common than `separate()`. In our current datasets, there is no need to use it at all. But, for the sake of seeing an example, let's separate the `begin` date from the `tidy_polls` data into `month` and `day` and then use `unite()` to re-unite those columns:
+
+```{r}
+polls_sillytest <- tidy_polls %>%
+  separate(col = begin, into = c("Start_month", "Start_day"), 
+           sep = "/")
+polls_sillytest
+```
+
+This situation could occur in practice: the date variable is in multiple columns: one for month and one for day (and if there are multiple years, there could be a third for year). We would use `unite()` to combine these two columns into a single `Date`, called `New_start_date`:
+
+```{r}
+polls_sillytest %>%
+  unite("New_start_date", c(Start_month, Start_day),
+        sep = "/")
+```
+
+Note how `unite()` just switches around the first two arguments of `separate()`. Argument 1 is now the name of the new column and Argument 2 is the names of columns in the data set that you want to combine.
+
+## Rename
+
+As mentioned earlier, having variable names with spaces doesn't technically violate any principle of tidy data, but it can be quite annoying. Always using backticks can be a huge pain. Occasionally we may just want to manually rename variables. We can rename variables easily with `rename()`, which just takes a series of `new_name = old_name` arguments. Here is a quick example.
+
+```{r}
+polls %>%
+  rename(Biden_D = `Biden (D)`, Trump_R = `Trump (R)`,
+         Other_U = `Other (U)`)
+
+```
+
+`rename()` can also be very useful if you have variable names that are very long to type out. `rename()` is actually from `dplyr`, not `tidyr`, but we didn't have a need for it with any of the `dplyr` data sets. 
+
+## Additional Exercises
+
+1. The file `daily_show_guests.csv` contains information on every guest Jon Stewart ever had on *The Daily Show*. (Source: https://github.com/fivethirtyeight/data/tree/master/daily-show-guests) 
+
+Briefly explain why this is a tidy data set.
+
+```{r}
+daily_show <- read_csv("data/daily_show_guests.csv")
+daily_show
+```
+
+
+
+2. The file `under5mortality.csv` contains the child mortality rate per 1,000 children born for each country from 1800 to 2015. (Source: https://www.gapminder.org/data/)
+
+a. Briefly describe why it is not considered to be tidy data and what changes need to be made to tidy it.
+
+
+```{r}
+under5mortality <- read_csv("data/under5mortality.csv")
+under5mortality
+```
+
+
+
+b. Use `pivot_longer` to create a tidy data set with columns `country`, `year` and `mortality`. Use `parse_number` to ensure that the `year` column is numeric. You may also find the `rename` function (from `dplyr`) useful to improve/customize variable names as well as the `drop_na` from `tidyr`.
+
+
+```{r}
+
+```
+
+3. The file `mlb2016.csv` contains the salary information presented by *USA Today* for all 862 players in Major League Baseball. (Source: http://www.usatoday.com/sports/mlb/salaries/2016/player/all/)
+
+
+a. Briefly describe why it is not considered to be tidy data and what changes need to be made to tidy it.
+
+```{r}
+mlb2016 <- read_csv("data/mlb2016.csv")
+mlb2016
+```
+
+
+b. Use `separate` and `parse_number` to tidy this data set.
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
+
+4.  The data set in `UBSprices2.csv` contains prices of a 1 kg bag of rice, a 1 kg loaf of bread, and a Big Mac in major world cities in 2009 and 2003.
+
+a. Briefly describe why it is not considered to be tidy data and what changes need to be made to tidy it.
+
+```{r}
+ubs2 <- read_csv("data/UBSprices2.csv")
+ubs2
+```
+
+
+b. Use `pivot_longer` and `separate` to tidy this data set. (Hint: In addition to accepting characters, the `sep` argument can also be set to the position at which to create a split. For example, if we specify `sep = 2`, then the character strings will be split into the first two characters and the remaining characters. In this example the type of commodity is of variable length, so it is easiest to count from the left. This is specified by using a negative value.)
+
+```{r}
+
+  
+```
