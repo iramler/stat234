@@ -1,0 +1,20 @@
+---
+title: "Practice with factors"
+output:
+  html_document
+---
+February 12, 2009 marked the 200th anniversary of Charles Darwin’s birth. Gallup, a national polling organization, surveyed 1018 Americans about their education level and their beliefs about evolution. The results from this survey are in the file `darwin.csv`.
+
+  a. Load and necessary packages and read in the data.
+    
+  b. Investigate different responses for each variable. One quick way of doing this is to use something like `unique(data_name$variable_name)`.
+    
+Hopefully, you noticed that the variables are ordinal categorical variables. However, the default way R handles factors is to put them in alphabetical order. 
+
+  c. Properly order the education level and belief variables. This function works on the variable level (and hence can be done within a `mutate` statement). Try to do this by writing a single chain of piped commands starting with the initial data frame and releveling both factors within the same mutate.
+  
+  d. Use ggplots to make a stacked bar chart where each bar is scaled to 100% (or a proportion of 1 is fine too) to visually investigate the relationship between the two variables. Also, check out the coord_flip() option and clean up the labels as needed.
+    
+  e. Use the group_by statement (and any other necessary commands) to get the counts for each Education/Belief combination. 
+  
+  f. Use the table from part (e) (not the full dataset) to create a grouped (or clustered) bar chart to investigate the relationship between the Education and Belief.

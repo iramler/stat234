@@ -1,0 +1,258 @@
+---
+title: "Working with Factors in R (An Introduction to the forcats package)"
+output: 
+  html_document
+---
+
+## Defining Factors
+The ``forcats`` package is part of the tidyverse and is useful for dealing with factors. Factors are simply categorical variables, useful for controlling the levels and order of a vector.
+
+Categorical or discrete variables, as opposed to continuous variables, are often qualitiative and can take on a finite number of values.
+
+Examples of categorical variables: types of fruit, locations, party preference, ethnicity.
+
+Example: ``colors`` is a character vector of length nine consisting of colors: red, blue, & green
+
+```{r}
+colors <- c("red","blue","green","green","red","blue","red","green","blue")
+class(colors)
+```
+
+The ``factor`` function works by assigning integers (number values) to the categorical values (red, blue, green) of the vector or variable. 
+
+```{r}
+colors_fct <- factor(colors)
+colors_fct
+```
+
+```{r}
+class(colors)
+class(colors_fct)
+```
+
+
+```{r}
+str(colors)
+str(colors_fct)
+```
+
+
+Each color is a level, and underlying each level is an integer associated with that level; red = 3, green = 2, blue = 1. The order of the levels is assigned alphabetically to the integer: b = 1, g = 2, r = 3.
+
+We can reorder the levels if we want to:
+
+```{r}
+colors_fct <- factor(colors, levels = c("red","blue", "green"))
+colors_fct
+```
+
+The order of the vector stays the same, but now the order of the levels has changed so that red = 1, blue = 2, green = 3
+```{r}
+str(colors_fct)
+```
+
+Factors are a useful data structure that allow you to have more control over how you analyze and visualize your data. Let's compare the summary function for colors as a character vector and as a factor.
+
+```{r}
+colors <- c("red","blue","green","green","red","blue","red","green","blue")
+summary(colors)
+```
+
+```{r}
+colors_fct <- factor(colors, levels = c("red","blue", "green"))
+summary(colors_fct)
+```
+
+As factors, each color becomes a distinct group and summarized separately.
+
+## The Forcats Package
+
+As useful as factors are, they can be quite a pain to work with at times. Luckily, ``forcats`` has functions that allow you to manipulate factors.
+
+``forcats`` is also part of the tidyverse suite of packages. Load it now:
+
+```{r}
+library(forcats)
+library(ggplot2) # we'll be using this too
+library(dplyr) # we'll be using this too
+```
+
+
+### Function: Factor Recode
+One useful function of forcats is ``fct_recode``. This allows you to change the levels (or name/identity) of a factor. Here’s an example:
+
+Let's use the airquality data set that comes pre-installed in R
+```{r}
+glimpse(airquality)
+#help(airquality)
+```
+
+The month column is data type integer, let's change it to a factor 
+```{r}
+airquality <- airquality %>%
+	mutate( Month_fct = factor(Month) )
+levels(airquality$Month_fct)
+```
+
+Let's rename the months using the fct_recode function. 
+```{r}
+airquality <-
+	airquality %>% 
+	mutate(
+		Month_fct = fct_recode(Month_fct, May = '5', June = '6', July = '7', Aug = '8', Sept = '9')
+	)
+
+glimpse(airquality$Month_fct)
+
+```
+
+```{r}
+ggplot(airquality, aes(x = Month_fct, y = Temp)) +
+  geom_boxplot(aes(fill = Month_fct)) +
+  labs(title = "Daily Temperatures Aggregated by Month", x = "Month", fill = "Month")
+```
+
+
+### The Factor Reverse Function
+If you just want to reverse the order, there’s the ``fct_rev`` function. You can even use it in line when defining your aesthetics in ggplot like so:
+
+```{r}
+ggplot(airquality, aes(x = fct_rev(Month_fct), y = Temp)) +
+  geom_boxplot(aes(fill = Month_fct)) +
+  labs(x = "Month", title = "Our plot now has the x-axis in reverse order")
+
+```
+
+
+#### The Factor Relevel Function
+Another useful function is ``fct_relevel``. This function allows us to change any number of levels to any position.
+
+```{r}
+airquality <-
+	airquality %>%
+		mutate(Month_fct = fct_relevel(Month_fct, 'Sept', 'July', 'May', 'Aug', 'June')
+		)
+
+levels(airquality$Month_fct)
+
+```
+
+Given that our month variable was already in the correct order, this may not seem useful at first. However, when you need to visualize or model your data in a particular way, the fct_relevel function is extremely useful!
+
+```{r}
+ggplot(airquality, aes(Month_fct, Temp)) +
+  geom_boxplot(aes(fill = Month_fct)) +
+  ggtitle(label = "Notice how the order of the level 'Month' has changed")
+
+```
+
+
+### The Factor Reorder Function
+And finally, it is often useful to reorder the factor in a way that is useful for visualization. For this, we can use the ``fct_reorder`` function.
+
+For this example, let’s use the ``mtcars`` data set:
+```{r}
+# Quick prep the data
+mtcars$model <- row.names(mtcars)
+glimpse(mtcars)
+```
+
+```{r}
+mtcars$model <- factor(mtcars$model)
+
+ggplot(mtcars, aes(mpg, model)) +
+  geom_point() +
+  ggtitle(label = "MPG vs. Car Model")
+
+```
+
+
+It’s difficult to make comparisons when the data is scattered. But we’re in luck! We can use the ``fct_reorder`` function to clean it up.
+
+``fct_reorder`` takes three arguments: ``.f`` = factor you want to reorder, ``.x`` = the variable in which the order will be based upon, and optionally ``fun`` (a function to  be used if there are multiple values of ``.x`` for each value of ``.f``.) Here we focus on only the first two arguments.
+
+```{r}
+ggplot(mtcars, aes(x = mpg, y = fct_reorder(.f = model, .x = mpg))) +
+  geom_point() +
+  labs(y = "model") +
+  ggtitle(label = "We can make better comparison by reordering the levels based on the mpg values!") +
+  theme(plot.title = element_text(size = 10, face = 'bold'))
+```
+
+## An example of an issue with Factors
+
+The following data contains the results from a small experiment.
+
+```{r}
+experiment <- readr::read_csv("data/experiment.csv")
+```
+
+
+Run the code to produce the following plot.
+
+```{r}
+ggplot(data = experiment, aes(x = dosage, y = response_time)) +
+  geom_point()
+```
+
+Notice how the dosage is treated as numerical variable and, as such, the x-axis is continuous.
+
+Suppose that the lead scientist thinks of the three values of dosage as levels akin to low, medium, and high instead of by the numerical amount. This would imply that you could use them as a factor instead.
+
+This chunk of code converts the dosage variable from a numeric to a factor. (And copies over the old variable.)
+```{r}
+experiment2 <- 
+  experiment %>%
+    mutate(dosage = factor(dosage)) 
+```
+
+
+Lets remake the plot.
+
+```{r}
+ggplot(data = experiment2, aes(x = dosage, y = response_time)) +
+  geom_point()
+```
+
+Notice how the spacing along the x-axis changed? Now it represents the factor with levels "3", "6", and "12".
+
+
+Unfortunately, the lead scientist changed their mind and wants to use the dosage as a number again. We'll illustrate what happens when we convert our factor into a numeric.
+
+```{r}
+experiment2 %>%
+  mutate(dosage = as.numeric(dosage)) %>%
+  ggplot(data = ., aes(x = dosage, y = response_time)) +
+  geom_point()
+```
+
+## Exercises
+
+1. Briefly describe why in our last example, the dosage was converted into 1, 2, and 3. (Tip: Reread the "Defining Factors" section.)
+
+> For the next several exercises, consider the `iris` data that we have used in previous exercises. (Recall that this data is already available in R and can be loaded using the command `data(iris)`.)
+
+2. What type of variable is `Species`? 
+
+3. Reproduce the following plot.
+
+4. Manually reorder the factor levels to produce the following plot.
+
+5. Reverse the order (without doing so manually)
+
+6. Now order it based on the sepal width (in increasing order)
+
+> You'll now switch to working the homebrew beer recipes located in the file `recipeData.csv`. The variables we'll need to these questions include the `Style` of beer (see [here](https://en.wikipedia.org/wiki/List_of_beer_styles){target="_blank"} for details), the percent alcohol content by volume (`ABV`), and the bitterness as measured by the International Bittering Units (`IBU`).
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(readr)
+beers <- read_csv("data/recipeData.csv")
+```
+
+
+7. For each style, calculate the following: (i) number of recipes, (ii) median ABV, and (iii) median IBU. Now, keep only the 20 most common styles. Be sure to store the resulting tibble as an object. (Recall that this dataset has a large number of outliers - likely due to misrecorded data. Using the median for both ABV and IBU should provide us with a more robust measure of center for these variables.)
+
+8. Construct a plot displaying the median IBU for each style. Order the styles by the median IBU value and display it such that the highest IBU is located at the top of the graphic. (Tip: Both columns and points are useful geoms here - try and and see what you like!)
+
+9. Construct a plot displaying the median IBU for each style. Order the styles by the median ABV value and color the geom by the number of recipes. (Tip: Sort the table from exercise 7 by ABV to see if you ordering in the plot worked.)
+
