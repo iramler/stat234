@@ -6,7 +6,18 @@ output:
 February 12, 2009 marked the 200th anniversary of Charles Darwin’s birth. Gallup, a national polling organization, surveyed 1018 Americans about their education level and their beliefs about evolution. The results from this survey are in the file `darwin.csv`.
 
   a. Load and necessary packages and read in the data.
-    
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(forcats)
+
+darwin <- read_csv("data/darwin.csv")
+
+```
+
+
   b. Investigate different responses for each variable. One quick way of doing this is to use something like `unique(data_name$variable_name)`.
     
 Hopefully, you noticed that the variables are ordinal categorical variables. However, the default way R handles factors is to put them in alphabetical order. 
@@ -18,3 +29,23 @@ Hopefully, you noticed that the variables are ordinal categorical variables. How
   e. Use the group_by statement (and any other necessary commands) to get the counts for each Education/Belief combination. 
   
   f. Use the table from part (e) (not the full dataset) to create a grouped (or clustered) bar chart to investigate the relationship between the Education and Belief.
+  
+  
+Refer back to the Stat 113 first day survey.
+
+```{r}
+stat113 <- read_csv("data/Stat113Fall2021.csv")
+```
+
+
+Plot the GPA by Class such that the sections are ordered by the median GPA.
+
+```{r}
+stat113 %>%
+  mutate(Class = factor(Class)) %>%
+  filter(!is.na(GPA)) %>%
+  ggplot(aes(x =              , 
+             y = GPA)) +
+  geom_boxplot()
+```
+
