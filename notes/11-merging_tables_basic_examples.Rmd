@@ -1,0 +1,177 @@
+---
+title: "Combining Data Sets with `dplyr`"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r message=FALSE}
+library(tidyverse)
+library(pander)
+```
+
+
+## Stacking Rows
+
+Suppose we have the following two data sets. The first, `dat1` has the variables `x1` and `y1`. The second, `dat2` has the same variables. They represent a pair of datasets measuring the same features at two different locations. We would like to combine them into a single data frame.
+
+```{r, echo=TRUE}
+dat1 <- tibble(x1 = runif(4),
+  y1 = rnorm(4))
+dat2 <- tibble(y1 = rpois(4,1),
+              x1 = rgamma(4,shape = 2,scale = 3))
+
+```
+
+Notice that the order of the two variables is switched in the two tibbles. This means we can't simply stack them without matching column headings
+
+#### `bind_rows()`
+
+```{r}
+```
+
+
+## Merging Data using Joins
+
+Suppose you have the following two data sets. The first, `df1` has the variables `id_numb` and `xvar`. The second, `df2` has the variables `id` and `yvar`. `id_numb` and `id` serve as identification variables, possibly with duplicates, where observations from the first data set with `id_numb = 1` correspond to observations in the second data set with `id = 1`.
+
+
+
+```{r}
+df1 <- tibble(id_numb = c(1, 1, 2, 4),
+  xvar = c(16, -1, 11, 13))
+df2 <- tibble(id = c(1, 2, 2, 3),
+              yvar = c(-1, -4, 0, -9))
+```
+
+##### Mutating Joins
+
+* `left_join()`
+
+* `right_join()`
+
+* `inner_join()`
+
+* `full_join()`
+
+
+##### Filtering Joins
+
+* `semi_join()`
+
+
+* `anti_join()`
+
+
+
+### More Examples
+
+
+1. Run the following and explain why `R` does not simply stack the rows. Then, fix the issue with the `rename()` function.
+
+```{r}
+df_test1a <- tibble(xvar = c(1, 2), yvar = c(5, 1))
+df_test1b <- tibble(x = c(1, 2), y = c(5, 1))
+bind_rows(df_test1a, df_test1b)
+```
+
+
+
+Consider the `babynames` `R` package, which has the following data sets:
+
+* `lifetables`: cohort life tables for different `sex` and different `year` variables, starting at the year 1900.
+* `births`: the number of births in the United States in each year, since 1909
+* `babynames`: popularity of different baby names per year and sex since the year 1880.
+
+```{r, results = "hide", appendix = TRUE}
+library(babynames)
+life_df <- babynames::lifetables
+birth_df <- babynames::births
+babynames_df <- babynames::babynames
+head(babynames)
+head(births)
+head(lifetables)
+```
+
+You can read about each data set with `?babynames`, `?births` and `?lifetables`.
+
+2. Merge/Join the births data into the babynames data.
+
+3. Merge/Join the babynames data into the births data.
+
+4. Examine the two joins, and explain why one resulting data set has fewer observations (rows) than the other.
+
+5. Evaluate whether the following statement is true or false: an `inner_join()` will always result in a data set with the same or fewer rows than a `full_join()`.
+
+6. Evaluate whether the following statement is true or false: an `inner_join()` will always result in a data set with the same or fewer rows than a `left_join()`.
+
+
+## Exercises
+
+1. Read in the gun violence data set, and suppose that you want to add a row to this data set that has the statistics on gun ownership and mortality rate in the District of Columbia (Washington D.C., which is in the NE region, has 16.7 deaths per 100,000 people, and a gun ownership rate of 8.7%). To do so, create a `tibble()` that has a single row representing D.C. and then combine your new `tibble` with the overall gun violence data set. Name this new data set `all_df`.
+
+```{r, message = FALSE}
+library(tidyverse)
+mortality_df <- read_csv("data/gun_violence_us.csv")
+```
+
+```{r, echo = FALSE, results = "hide"}
+dc_df <- tibble(state = "Washington D.C.", mortality_rate = 16.7,
+       ownership_rate = 0.087, region = "NE")
+```
+
+2. Explain why each attempt at combining the D.C. data with the overall data doesn't work or is incorrect.
+
+```{r, error = TRUE, echo = TRUE, results = "hide"}
+test1 <- tibble(state = "Washington D.C.", mortality_rate = 16.7,
+                ownership_rate = 8.7, region = "NE")
+bind_rows(mortality_df, test1)
+
+test2 <- tibble(state = "Washington D.C.", mortality_rate = 16.7,
+       ownership_rate = 0.087, region = NE)
+bind_rows(mortality_df, test2)
+
+test3 <- tibble(state = "Washington D.C.", mortality_rate = "16.7",
+       ownership_rate = "0.087", region = "NE")
+bind_rows(mortality_df, test3)
+```
+
+3. Examine the following data sets that are in `R`'s base library on demographic statistics about the U.S. states and state abbreviations:
+
+```{r}
+df1 <- as_tibble(state.x77)
+df2 <- as_tibble(state.abb)
+df1
+df2
+```
+
+Combine the two data sets with `bind_cols()`. What are you assuming about the data sets in order to use this function? 
+
+4. Use a join function to combine the mortality data set (`all_df`) __with__ D.C. with the states data set from `states_df`. For this exercise, keep the row with Washington D.C., having it take on `NA` values for any variable not observed in the states data.
+
+5. Repeat Exercise 4, but now drop Washington D.C. in your merging process. Practice doing this __with a join function__ (as opposed to `slice`-ing or `filter`-ing it out explicitly).
+
+6. Use `semi_join()` to create a subset of `states_df` that are in the `NE` region. __Hint__: You will need to filter `all_df` first to contain only states in the `NE` region.
+
+7. Do the same thing as Exercise 6, but this time, use `anti_join()`. __Hint__: You'll need to filter `all_df` in a different way to achieve this.
+
+8. Examine the following data sets (the first is `df1` and the second is `df2`) and then, without running any code, answer the following questions. (You can check your answer using code, but try it "by hand" first!)
+
+```{r, echo = TRUE, results = "show"}
+df1 <- tibble(id = c("A", "B", "C", "E", "F"), xvar = c(1, 2, 3, 1, 2))
+df2 <- tibble(id = c("A", "C", "D", "E", "G", "H"), yvar = c(2, 1, 2, 1, 1, 4))
+```
+
+a. How many rows would be in the data set from `left_join(df1, df2, by = c("id" = "id"))`?
+
+
+b. How many rows would be in the data set from `left_join(df2, df1, by = c("id" = "id"))`?
+
+c. How many rows would be in the data set from `full_join(df1, df2, by = c("id" = "id"))`?
+
+d. How many rows would be in the data set from `inner_join(df1, df2, by = c("id" = "id"))`?
+
+e. How many rows would be in the data set from `semi_join(df1, df2, by = c("id" = "id"))`?
+
+f. How many rows would be in the data set from `anti_join(df1, df2, by = c("id" = "id"))`?
+
