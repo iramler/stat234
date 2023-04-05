@@ -1,0 +1,302 @@
+---
+title: "Introduction to Merging Data Tables in R"
+output: html_document
+    
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE, message = FALSE)
+```
+
+To begin, let's ensure that `dplyr` and `readr` are loaded.
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(readr)
+```
+
+
+## Stacking Rows and Appending Columns
+
+
+### Stacking Rows with `bind_rows`
+
+Occasionally you come across data sets that are broken into multiple files, even though the information contained in each is essentially the same. For example, the two files **ogdensburg_2019_10_31.csv** and **ogdensburg_2019_12_25.csv** contain hourly weather data from the Ogdensburg Airport on 31 Oct 2019 and 25 Dec 2019, respectively. Both files are data scraped from Weather Underground (https://www.wunderground.com/).
+
+Read these files in and notice that they both contain the same variables. (Also notice that they aren't especially tidy!)
+
+```{r}
+halloween <- read_csv("data/ogdensburg_2019_10_31.csv")
+xmas <- read_csv("data/ogdensburg_2019_12_25.csv")
+```
+
+To join the two data frames (datasets) vertically we can use the `bind_rows` function.
+
+```{r}
+ogd <- bind_rows(halloween, xmas)
+```
+
+However, notice that now we can't tell which rows were originally from which data set! This can be fixed using a few extra options. Try to modify the code below to bind the two sets together with the proper labels.
+
+
+```{r, eval = FALSE}
+bind_rows("group 1" = x1, "group 2" = x2, .id = "group")
+
+```
+
+Notes:
+* What if the columns in the two data sets are in different orders? Not a problem! When you use `bind_rows` the columns in the two data frames do not have to be in the same order.
+* Say there was a third (or fourth or fifth) day of data that you wanted to combine. It’s reasonably intuitive, just put them all together! For example,  `bind_rows(halloween, xmas, lunar_new_year, coronation_day)`
+* What if the column names don't match? Well, if they are supposed to, you'll need to rename one of them to match the other. If not, R will replace cells with missing values as needed. Foir example,
+
+```{r}
+df_test2a <- tibble(xvar = c(1, 2))
+df_test2b <- tibble(xvar = c(1, 2), y = c(5, 1))
+bind_rows(df_test2a, df_test2b)
+```
+
+
+
+
+### Binding rows with `bind_cols`
+
+We won’t spend much time talking about how to bind together columns because it’s generally a little dangerous. (Except for trivial datasets.)
+
+We will use a couple of test data sets, df_test1a and df_test1b, to see it in action:
+
+
+```{r}
+df_test1a <- tibble(xvar = c(1, 2), yvar = c(5, 1))
+df_test1b <- tibble(x = c(1, 2), y = c(5, 1))
+bind_cols(df_test1a, df_test1b)
+
+```
+
+For a larger data set, this be a dangerous way to combine data as you really need to be aware of what is in your data table in the end. However, for small data sets, you can easily inspect the results to ensure they are combined properly.
+
+Now we'll move on to a far better way of merging data sets together - joining.
+
+
+## Introduction to Joining
+
+There are many situations where data sets are broken into multiple tables, and multiple reasons that this might make sense---sometimes it is easier to 
+collect data in different pieces, other times it is to reduce the file size. 
+Regardless of the reason for splitting data sets into multiple tables, they should
+always formatted in such a way that there is at least one common column between 
+the tables so that they can be merged as needed. In this example we will
+explore how to use the `join` suite of functions found in the `dplyr` package
+to merge these data tables.
+
+
+**Note**: In R, most tabular sets of data are called **data frames**. Data frames can store objects of different classes (e.g. some columns can be text and other columns can be integers). A synonymous term is **data table**, which is used by some textbooks and other languages, such as the structured query language (SQL).
+
+
+
+
+
+### Example data tables
+
+To illustrate the different `join` functions we will use a small example of a customer database. We will focus on two tables: **orders** which contains the order number, customer ID, and date of the order; and **customers** which contains the customer ID and customer name. These are intentionally small data tables so that is easier to see how the `join` statements are working.
+
+```{r}
+orders <- read_csv("data/orders.csv")
+orders
+```
+
+```{r}
+customers <- read_csv("data/customers.csv")
+customers
+```
+
+
+### Joining data tables
+
+The the `dplyr` package provides six different `join` functions, each merges two data tables together in a different way. The best way to understand these functions is to see how each works in our small example.
+
+
+All of the functions have the same three arguments:
+
+argument | explanation
+-------- | -------------------------------------------------------------
+`x`      | the first (left) table to join
+`y`      | the second (right) table to join
+`by`     | a character vector of variables to join by, notice that the column name must always be in quotes.
+
+
+### inner_join
+
+`inner_join` creates a new table which is restricted to cases where the values of "by variable" exist in both data sets.  All columns from both data sets are returned for these cases.
+
+
+```{r}
+inner_join(x = orders, y = customers, by = "id")
+```
+
+
+**Remark**
+
+In this `inner_join`, we lose the row for order 4 from the **orders** table because customer 50 does not appear in the **customers** data table. We also lose lose orders 15, 16 and 23 from the **customers** table. Note the columns order, date and name are also returned.
+
+
+### left_join
+
+`left_join` returns all cases from the `x` data table, regardless of whether there are matching values of the `by` variable(s) in `y`. All columns from both data tables are returned for these cases.
+
+```{r}
+left_join(x = orders, y = customers, by = "id")
+```
+
+
+**Remark**
+
+This new data frame now includes the `name` column. Since customer 50 does not appear in the **customers** data table, an `NA` (missing value) is used for their name.
+
+<!-- We have added the `name` column to the `orders` data table. Customer 50 does not appear in the `customers` data table, so an `NA` (missing value) is used for their `name`. -->
+
+
+### right_join
+
+`right_join` returns all cases from the `y` data table, regardless of whether there are matching values of the `by` variable(s) in `x`. All columns from both data tables are returned for these cases.
+
+```{r}
+right_join(x = orders, y = customers, by = "id")
+```
+
+
+**Remark**
+
+We have added the `order` and `date` columns to the **customers** data table. Customers 15, 16, and 23 did not make purchases during this time frame, so missing values (`NA`s) are used for their `order` and `date` values.
+
+
+### full_join
+
+`full_join` returns all rows and columns from both `x` and `y`.
+
+```{r}
+full_join(x = orders, y = customers, by = "id")
+```
+
+
+**Remark**
+
+We have fully merged the **orders** and **customers** data tables; thus, we get all of the columns and all of the rows from both data tables. `NA`s fill in the necessary values for customers not making purchases and for orders without a customer record.
+
+
+### semi_join
+
+`semi_join` returns all rows from the `x` data table where there are matching values of the `by` variable(s) in `y`, and only the columns from `x`.
+
+```{r}
+semi_join(x = orders, y = customers, by = "id")
+```
+
+
+**Remark**
+
+We lose the row for order 4 because customer 50 does not appear in the **customers** data table.
+
+
+#### inner_join vs. semi_join
+
+Above, the `inner_join` and `semi_join` returned the same number of rows, but this will not always be the case. For example, suppose that customer 42 also placed an order on May-01 so that we have multiple orders from the same customer.
+
+```{r}
+extra_order <- data.frame(order = 5, id = 42, date = "May-01")
+extra_order
+
+orders2 <- rbind(orders, extra_order)
+orders2
+```
+
+```{r}
+inner_join(x = customers, y = orders2, by = "id")
+```
+
+```{r}
+semi_join(x = customers, y = orders2, by = "id")
+```
+
+
+**Remark**
+
+The result of the `inner_join` includes two rows for customer 42 because `inner_join` returns all of the columns from both data tables for `id`s that match. The result of the `semi_join` only returns one row for each customer because it only returns the rows from **customers** that have matching `ids` in **orders2**.
+
+
+### anti_join
+
+`anti_join` returns all rows from the `x` data table where there are <u>not</u> matching values of the `by` variable(s) in `y`, and only the columns from `x`.
+
+```{r}
+anti_join(x = orders, y = customers, by = "id")
+```
+
+
+**Remark**
+
+Order 4 is the only order from a customer without a record in the **customers** data table, so it is the only row of **orders** returned.
+
+
+
+```{r}
+anti_join(x = customers, y = orders, by = "id")
+```
+
+
+**Remark**
+
+Customers 15, 16, and 23 did not place orders during this time frame, so their entries from the  **customers** data table are returned.
+
+
+### Common complications
+
+All of our examples have only used a single column to match the entries between the data tables, and has also assumed that the columns will have identical names. This will not always be the case. Below we detail how to refine what variables you merge by.
+
+* If you want to join by multiple variables, then you need to specify a vector of variable names: `by = c("var1", "var2", "var3")`. Here all three columns must match in both tables.
+
+* If you want to use all variables that appear in both tables, then you can leave the `by` argument blank.
+
+* If the variable you wish to join by is not named identically in both tables, then you specify `by = c("left_var" = "right_var")`.
+
+
+Another issue that crops up occasionally is duplicate entries in the variable(s) that you wish to merge by. We saw one example of this above when there were two orders from the same customer. In that case the `id` value was unique in the **customer** table, but not in the **orders** table. The result of this join is quite logical, as seen above. If, however, both tables contain duplicate entries in the variable(s) that you wish to merge by, all possible combinations of these entries are returned. A simple example for a `full_join` is shown below:
+
+```{r}
+# Creating example data frames
+table1 <- data.frame(key = c("a", "a", "b", "b", "c"), var = 1:5)
+table1
+
+table2 <- data.frame(key = c("a", "a", "b", "b", "c"), var = LETTERS[1:5])
+table2
+
+# A full join
+full_join(x = table1, y = table2, by = "key")
+```
+
+In this situtaion, the results for `left_join`, `right_join`, and `full_join` will be identical. 
+
+### Exercises
+
+The files `books.csv`, `authors.csv`, and `book-authors.csv` give details about the planned summer reading of a statistics student. `books.csv` provides details for each book (isbn, title, year, and genre), `authors.csv` provides details about each author (authorid, first name, last name, and nationality), and `book-authors.csv` provides the author identification (`authorid`) for each isbn (books with multiple authors will have multiple rows).
+
+1. Read the three files into R, naming them **books**, **authors**, and **book_authors**.
+
+
+2. Use the appropriate `join` statement to add the ISBNs to the **authors** data table. Why does the resulting data frame have 31 rows instead of 11?
+
+
+3. To eliminate the duplicate rows of your data frame from #6 (which we'll assume you named **df2**) run the following code (change the object names to align with your code as necessary):    
+
+    ```
+    df2 <- unique(df2)
+    ```
+
+
+4. Use the appropriate `join` statement to add the author information table from #3 to the **books** data table. 
+
+
+5. Are there any authors in the **authors** data table that do not correspond to books in the **books** data table? Use an appropriate join statement to do this.
+
+
+6. After reading *A Game of Thrones* the student decides to read the rest of the series over the summer. `books2.csv` contains the updated books on the student's reading list. Read this file into R, naming it **books2**.
+
+
+7. Use the same join statement that you did in #4, but using **books2** rather than **books**.
