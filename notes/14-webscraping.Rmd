@@ -1,0 +1,75 @@
+# Introduction to Web Scraping
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Scraping with `rvest`
+
+Sometimes, you might want data from a public website that __isn't__ provided in a file format. To obtain this data, you'll need to use web scraping, a term which just means "getting data from a website." The easiest way to do this in `R` is with the `rvest` package. Note that we could spend an entire semester talking about web scraping, but we will focus only on websites where the scraping of data is "easy" and won't give us any major errors.
+
+Go to the following website and suppose that you wanted the table of gun violence statistics in `R`: <a href="https://en.wikipedia.org/wiki/Gun_violence_in_the_United_States_by_state" target="_blank">https://en.wikipedia.org/wiki/Gun_violence_in_the_United_States_by_state</a>. You could try copy-pasting the table into Excel and reading the data set in with `read_excel()`. Depending on the format of the table, that strategy may work but it may not. Another way is to scrape it directly with `rvest`. Additionally, if the website continually updates (standings for a sports league, enrollment data for a school, best-selling products for a company, etc.), then scraping is much more convenient, as you don't need to continually copy-paste for updated data. 
+
+In the following code chunk, `read_html()` reads in the entire html file from the url provided while `html_nodes()` extracts only the tables on the website.
+
+```{r, results = "hide", message = FALSE, appendix = TRUE}
+library(tidyverse)
+library(rvest)
+
+## provide the URL and name it something (in this case, url).
+url <- "https://en.wikipedia.org/wiki/Gun_violence_in_the_United_States_by_state"
+
+## convert the html code into something R can read
+h <- read_html(url)
+
+## grabs the tables
+tab <- h %>% html_nodes("table")
+```
+
+You'll see that, for this example, there are 3 tables provided. The tables are stored in a `list` and we can reference the first table using `[[1]]`, the second table using `[[2]]`, etc. For the purposes of this class, we will figure out which of the 3 tables is the one we actually want using trial and error.
+
+The `html_table()` function converts the table into a `data.frame` object.
+
+```{r, error = TRUE, results = "hide", appendix = TRUE}
+test <- tab %>% html_table()
+
+head( test[[1]] )
+head( test[[2]] )
+head( test[[3]] )
+```
+
+Which of the 3 tables is the one that we would want to use for an analysis on gun violence in the United States? After determining which one to use, extract it from the list and store it as a new object. (Then double-check your Environment to see if it is a form that you easily recognize.)
+
+```{r}
+gun_violence <- test[[2]]
+```
+
+
+As another example, consider scraping data from SLU's athletics page. In particular, suppose we want to do an analysis on SLU's baseball team.
+
+Go to the following website to look at the table of data that we want to scrape: <a href="https://saintsathletics.com/sports/baseball/stats/2021" target="_blank">https://saintsathletics.com/sports/baseball/stats/2021</a>.
+
+After looking at the website, scrape the data set.
+
+```{r, results = "hide", appendix = TRUE}
+url <- "https://saintsathletics.com/sports/baseball/stats/2021"
+h <- read_html(url)
+tab <- h %>% html_nodes("table")
+tab
+
+
+objs <- tab %>% html_table()
+head(objs[[1]])
+tail(objs[[1]])
+
+# can continue (or look at object in viewer)
+
+```
+
+There's now 72 different tables! See if you can figure out where the first few tables are coming from on the website. After doing so, extract the appropriate table from the list and store it as a tibble.
+
+### Exercises
+
+1. Go to https://en.wikipedia.org/wiki/Beer_measurement Scrape the tables and, join the IBU table into the SRM table. (Note that even with some cleaning, we won't get a lot of rows in the IBU table that have a match with the SRM table.)
+
+
