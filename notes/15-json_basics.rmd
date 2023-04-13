@@ -1,0 +1,67 @@
+---
+title: "JSON Formatted Data"
+output: html_document
+---
+
+This is a very short tutorial to introduce the JSON format. We will use a dataset related to the mobile game, Clash Royale.
+
+## Wikipedia definition of JSON
+> JavaScript Object Notation (JSON, pronounced ("Jason") is an open-standard file format that uses human-readable text to transmit data objects consisting of attribute–value pairs and array data types (or any other serializable value). It is a very common data format, with a diverse range of applications, such as serving as replacement for XML in AJAX systems.
+
+> JSON is a language-independent data format. It was derived from JavaScript, but many modern programming languages include code to generate and parse JSON-format data. The official Internet media type for JSON is application/json. JSON filenames use the extension .json.
+
+## Working with JSON data in R
+
+Let's start by opening the file ``clash_royale_card_info.json``. First, lets just take a look at the raw structure of the file. Do so by clicking on the file in the Files pane. This should open a tab with the file.
+
+Notice that it has a very non-rectanglar structure to it. JSON formatted files are actually (or usually) nicely formatted files that contain a hierarchical/tree-like structure to storing their information. (Unfortunately, while a good way to store data of this type, it can be awkward to use in R.) Lucky for us, there are several online JSON viewing programs available to see the structure of the file. My current favorite is https://codebeautify.org/jsonviewer Please open that link now and copy/paste the entire donuts.json file in the left window. While this website has some nice features to help make the data more readily usable in standard statistical procedures, R also has packages to assist. In particular, the ``jsonlite`` package is useful. 
+
+Some JSON files are very easy to load into R. For example, let's load the Clash Royale Card information from https://royaleapi.github.io/cr-api-data/json/cards.json 
+
+```{r}
+library(jsonlite)
+# modify this!
+url <- "https://royaleapi.github.io/cr-api-data/json/cards.json"
+cr_cards <- read_json(url, simplifyVector = TRUE)
+
+# shortcut is 
+cr_cards2 <- fromJSON(url)
+
+identical(cr_cards, cr_cards2)
+```
+
+## Working with more complex structures
+
+Not all JSON files are as clean as ours. Consider the file `donuts2.json`.
+
+```{r}
+library(tibble)
+library(tidyr)
+library(dplyr)
+
+donuts <- read_json("data/donuts2.json", simplifyVector = TRUE)
+donuts
+class(donuts)
+```
+
+Inspecting this data we have what is called a "nested" structure. While convenient for storing, this can often be a hassle to work with. There is a lot that can be done with nested data, but it is considered an advanced topic for us. (And quite honestly, I personally rarely work with it.)
+
+However, I'll walk you through how to deal with this specific data set.
+
+```{r}
+donuts_tibble <- 
+  donuts  %>%  
+    as_tibble() # tibbles are slightly easier to work with nested data than data frames are
+
+d2 <-
+  donuts_tibble %>%
+    unnest_longer(batters) %>% # expand the batters portion
+    #unnest_longer(topping) %>% # could also expand topping portion
+    unnest(cols = c(batters, topping), names_sep = "_") # clean up the unnested columns and fix their names
+
+
+```
+
+
+
+
