@@ -20,6 +20,13 @@ Some JSON files are very easy to load into R. For example, let's load the Clash 
 
 ```{r}
 library(jsonlite)
+library(tibble)
+library(tidyr)
+library(dplyr)
+```
+
+
+```{r}
 # modify this!
 url <- "https://royaleapi.github.io/cr-api-data/json/cards.json"
 cr_cards <- read_json(url, simplifyVector = TRUE)
@@ -35,9 +42,6 @@ identical(cr_cards, cr_cards2)
 Not all JSON files are as clean as ours. Consider the file `donuts2.json`.
 
 ```{r}
-library(tibble)
-library(tidyr)
-library(dplyr)
 
 donuts <- read_json("data/donuts2.json", simplifyVector = TRUE)
 donuts
@@ -64,4 +68,11 @@ d2 <-
 
 
 
+## One more simple example
+
+Results from the Women's Lake Placid Ironman Triathlon from 2002 - present.
+
+```{r}
+url = "http://myslu.stlawu.edu/~msch/SCORE/triDataLakePlacidFinal.json"
+```
 
