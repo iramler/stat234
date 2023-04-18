@@ -1,0 +1,258 @@
+---
+title: "Introduction to Working with Dates in R"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval=FALSE,message=FALSE)
+```
+
+
+
+## Introduction
+
+In many data files, the date or time of day will be an important variable. In this introductory tutorial, we will learn some basics on to handles dates.
+
+
+__A Reminder__: Why do `<date>` objects even matter? Compare the following two plots: one made where the date is in `<chr>` form and the other where date is in its appropriate `<date>` form. 
+
+```{r, appendix = TRUE}
+library(tidyverse)
+library(lubridate)
+
+animal_crossing <- read_csv("data/animal_crossing_holidays.csv") 
+
+animal_crossing %>%
+ggplot(data = ., aes(x = Date1, y = Holiday)) +
+  geom_point()
+
+animal_crossing %>% 
+  mutate(Date_test_plot = dmy(Date1)) %>%
+  ggplot(data = ., aes(x = Date_test_plot, y = Holiday)) +
+  geom_point()
+```
+
+In which plot does the ordering on the x-axis make more sense?
+
+## Dates with `lubridate`
+
+__Goals__:
+
+* use `lubridate` functions to convert a character variable to a `<date>` variable.
+* use `lubridate` functions to extract useful information from a `<date>` variable, including the year, month, day of the week, and day of the year.
+
+
+### Converting Variables to `<date>` 
+
+The `lubridate` package is built to easily work with `Date` objects and `DateTime` objects. 
+
+To begin, here are a few basic functions `today()`, which  prints today's date, and  `now()` prints today's date and time.
+
+
+```{r, message = FALSE, appendix = TRUE}
+today()
+now()
+```
+
+There are a number of built-in functions to convert character strings to Dates and Times. 
+
+#### Parsing Dates and Times
+
+  - `ymd()`: Parses dates in the format of "year-month-day" and returns a datetime object.
+  - `dmy()`: Parses dates in the format of "day-month-year" and returns a datetime object.
+  - `mdy()`: Parses dates in the format of "month-day-year" and returns a datetime object.
+  - `hm()`: Parses times in the format of "hour-minute" and returns a time object.
+  - `hms()`: Parses times in the format of "hour-minute-second" and returns a datetime object.
+
+Here is a quick example showing what they do.
+
+```{r}
+# dates in different formats
+
+d1 <- "2023-04-19" # Also known as 
+d2 <- "19-04-2023"
+d3 <- "04-19-2023"
+
+ymd(d1)
+dmy(d2)
+mdy(d3)
+```
+
+
+```{r}
+# Parse time in different formats
+time_hm <- hm("10:15")
+time_hms <- hms("10:15:30")
+```
+
+As seen before, these also work on variables within data frames (tibbles).
+
+```{r}
+animal_crossing %>%
+  mutate(Date1_v2 = dmy(Date1)) %>%
+  relocate(Date1_v2)
+```
+
+
+#### `year()`, `month()`, and `mday()` 
+
+The functions `year()`, `month()`, and `mday()` can grab the year, month, and day of the month, respectively, from a `<date>` variable. Like the `forcats` functions, these will almost always be paired with a `mutate()` statement because they will create a new variable.
+
+Notice in the animal crossings data there are a number of variables related to these aspects. Here is how they were created.
+
+```{r}
+
+# starting fresh
+animal_crossing2 <- animal_crossing %>% select(Holiday, Date1)
+
+# recreate initial 
+animal_crossing2 %>%
+  mutate(
+    Date = dmy(Date1),
+    Month = month(Date),
+    Year = year(Date),
+    Day = mday(Date),
+    Month2 = month(Date, label = TRUE, abbr = FALSE),
+    
+    # a few extras
+    Day_in_year = yday(Date),
+    Day_of_week = wday(Date, label = TRUE, abbr = TRUE),
+    week_of_year = week(Date)
+  )
+```
+
+
+## Using parse_date from the readr package
+
+Another common way to work with dates is to use the `parse_date` (and `parse_date_time` function from `lubridate`). This usually requires us to identify a `format` for the date (or date-time) structure.
+
+For example, if you have a date in the format "2023-04-18 09:19:59", you can use the following format string to parse it using the parse_date() function:
+
+```{r}
+date_string <- "2023-04-18 09:19:59"
+date <- parse_date(date_string, format = "%Y-%m-%d %H:%M:%S")
+date
+```
+
+
+Below is a table of common formats. 
+
+
+| Format | Description                                       |
+|--------|---------------------------------------------------|
+| %d     | Day of the month as a number (01-31).     |
+| %m     | Month as a number (01-12).                |
+| %Y     | Year with century (as a four digit number).            |
+| %y     | Year without century (00-99). |
+| %H     | Hour (24-hour clock) as a decimal number (00-23). |
+| %I     | Hour (12-hour clock) as a decimal number (01-12). |
+| %M     | Minute as a decimal number (00-59).               |
+| %S     | Second as a decimal number (00-59).               |
+| %z     | Time zone offset from UTC (e.g., "-0800").        |
+| %Z     | Time zone name.                                   |
+
+
+## Another Example
+
+We have data on flights originating from New York airports in November 2022. 
+
+```{r}
+
+```
+
+
+
+```{r}
+url <- "https://raw.githubusercontent.com/iramler/stat234/main/notes/data/ny_airports_nov2022.csv"
+ny_airports <- read_csv(url)
+```
+
+```{r}
+ny_airports %>% mutate(FL_DATE = str_remove(FL_DATE, " 12:00:00 AM")) -> ny_airports
+```
+
+
+First, lets reduce this data into just the four airports in Albany, Buffalo, Rochester, and Syracuse. 
+
+```{r}
+airports_to_use = paste( c('Albany', 'Buffalo', 'Rochester', 'Syracuse'), "NY", sep = ", ")
+
+upstate_airports <- 
+  ny_airports %>%
+    filter(ORIGIN_CITY_NAME %in% airports_to_use)
+```
+
+Now convert the FL_DATE variable from a `<chr>` to a `<date>`.
+
+```{r}
+upstate_airports <-
+  upstate_airports %>%
+  mutate(Flight_Date = mdy(FL_DATE))
+```
+
+* Calculate the average delay time for each airport.
+
+
+* Calculate the proportion of flights delayed for each airport.
+
+
+* Which day of the week has the most flights?
+
+
+Try out this plot.
+
+```{r}
+library(ggTimeSeries)
+upstate_airports %>%
+  group_by(Flight_Date, ORIGIN_CITY_NAME) %>%
+  summarise(avg_daily_delay = mean(DEP_DELAY, na.rm=TRUE)) %>%
+  ungroup() %>%
+ ggplot_calendar_heatmap("Flight_Date",
+                        "avg_daily_delay", 
+                        ) + 
+  facet_wrap(~ORIGIN_CITY_NAME) +
+  theme(legend.position = "top") +
+  scale_fill_continuous(low = 'green', high = 'red') +
+  labs(y = "Day of Week", y = "Month", fill = "Average Delay (min)") +
+  coord_flip()
+
+```
+
+
+## Another Fun Example
+
+https://trends.google.com/trends/explore?geo=US&hl=en
+
+```{r}
+library(gtrendsR)
+
+search_terms <- c("pumpkin spice","cold brew")
+
+mysearch <- gtrends(
+  keyword = search_terms, onlyInterest = TRUE,
+  #time = "all", # this will let us get the data from 2004 - present 
+  time = "2013-04-18 2023-04-18"
+)
+
+coffee_df <- mysearch[[1]]
+
+head(coffee_df)
+tail(coffee_df)
+```
+
+
+* Make a plot of your Popularity variables through time. 
+
+```{r, echo = FALSE, fig.keep = "none"}
+ggplot(data = coffee_df, aes(x = date, 
+                                  y = hits,
+                                  color = keyword)) +
+  geom_line(size = 1.5) +
+  scale_color_viridis_d(begin = 0, end = 0.9) +
+  theme_bw() +
+  labs(x= "Date", y = "Popularity",color = "") +
+  theme(legend.position = "bottom")
+```
+
+
+
