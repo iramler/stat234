@@ -9,11 +9,21 @@
 library(tidyverse)
 library(shiny)
 
-imdb_tv <- read_csv("imdb_popular_tvshows.csv")
+imdb_tv <- read_csv("imdb_popular_tvshows.csv") %>%
+    filter(!is.na(episodeRating)) %>%
+    mutate(episodeNumber = parse_number(episodeNumber),
+           seasonNumber = parse_number(seasonNumber)
+           )
+# could also use tidyr::drop_na(episodeRating)
+
+shows <- imdb_tv %>% 
+    pull(Show_Name) %>% 
+    unique() %>%
+    sort()
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-
+    
     # Application title
     titlePanel("IMDb Popular TV Show Episode Ratings"),
 
@@ -22,15 +32,14 @@ ui <- fluidPage(
         sidebarPanel(
             selectInput("selectShow", 
                         label = h3("Select a show"), 
-                        choices = list("Narcos",
-                                       "The Witcher",
-                                       "Westworld"), 
+                        choices = shows,
+                        multiple = TRUE,
                         selected = "")
         ),
 
         # Show a plot of the generated distribution
         mainPanel(
-           plotOutput("distPlot")
+           plotOutput("episodePlot")
         )
     )
 )
@@ -38,17 +47,41 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-    output$distPlot <- renderPlot({
+    selectedData <- reactive({
         # subset data
         plotData <- 
             imdb_tv %>%
-            filter(Show_Name == input$selectShow)
+            filter(Show_Name %in% input$selectShow)
+        
+        plotData
+    }) %>% bindEvent(input$selectShow)
+    
+    output$episodePlot <- renderPlot({
+        show_data <- selectedData()
+
         # draw the plot
         
-        plotData %>%
-            ggplot(aes(x = factor(seasonNumber), 
-                       y = episodeRating)) +
-            geom_boxplot()
+        if(max(show_data$seasonNumber) == 1){
+            # make a scatterplot
+            my_plot <- show_data %>%
+                ggplot(aes(x = episodeNumber,
+                           y = episodeRating
+                           )) +
+                geom_point() +
+                geom_line()
+            
+        }
+        if(max(show_data$seasonNumber) > 1){
+            my_plot <- show_data %>%
+                ggplot(aes(x = factor(seasonNumber), 
+                           y = episodeRating,
+                           fill = Show_Name
+                )) +
+                geom_boxplot() +
+                facet_wrap(~Show_Name)
+        }
+        
+        my_plot
 
     })
 }
