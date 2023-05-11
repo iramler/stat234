@@ -681,6 +681,7 @@ query = &quot;SELECT COUNT(*) FROM employees WHERE hire_date BETWEEN 2010 AND 20
 query = &quot;SELECT max(salary) 
 FROM salaries
 LEFT JOIN employees ON salaries.employee_id = employees.id
+WHERE title = &#39;manager&#39;
 &quot;</code></pre>
 
 
